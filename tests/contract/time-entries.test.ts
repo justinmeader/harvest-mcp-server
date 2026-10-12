@@ -39,29 +39,29 @@ describe('Time Entry Tools', () => {
           method: 'GET',
           url: `https://api.harvestapp.com/v2${url}`,
           headers: {
-            'Authorization': 'Bearer test_token_12345',
-            'Harvest-Account-Id': '123456'
-          }
+            Authorization: 'Bearer test_token_12345',
+            'Harvest-Account-Id': '123456',
+          },
         });
-        
+
         // For error responses, axios would throw
         if (mockResponse.status >= 400) {
           const error = new Error(`HTTP ${mockResponse.status}`);
           (error as any).response = {
             status: mockResponse.status,
             data: mockResponse.data,
-            headers: mockResponse.headers || {}
+            headers: mockResponse.headers || {},
           };
           (error as any).config = { url };
           throw error;
         }
-        
+
         // Simulate axios response structure
         return {
           status: mockResponse.status,
           data: mockResponse.data,
           headers: mockResponse.headers || {},
-          config: { url }
+          config: { url },
         };
       }),
       post: jest.fn().mockImplementation(async (url: string, data: any) => {
@@ -69,29 +69,29 @@ describe('Time Entry Tools', () => {
           method: 'POST',
           url: `https://api.harvestapp.com/v2${url}`,
           headers: {
-            'Authorization': 'Bearer test_token_12345',
-            'Harvest-Account-Id': '123456'
+            Authorization: 'Bearer test_token_12345',
+            'Harvest-Account-Id': '123456',
           },
-          data: data
+          data,
         });
-        
+
         // For error responses, axios would throw
         if (mockResponse.status >= 400) {
           const error = new Error(`HTTP ${mockResponse.status}`);
           (error as any).response = {
             status: mockResponse.status,
             data: mockResponse.data,
-            headers: mockResponse.headers || {}
+            headers: mockResponse.headers || {},
           };
           (error as any).config = { url };
           throw error;
         }
-        
+
         return {
           status: mockResponse.status,
           data: mockResponse.data,
           headers: mockResponse.headers || {},
-          config: { url }
+          config: { url },
         };
       }),
       patch: jest.fn().mockImplementation(async (url: string, data?: any) => {
@@ -99,29 +99,29 @@ describe('Time Entry Tools', () => {
           method: 'PATCH',
           url: `https://api.harvestapp.com/v2${url}`,
           headers: {
-            'Authorization': 'Bearer test_token_12345',
-            'Harvest-Account-Id': '123456'
+            Authorization: 'Bearer test_token_12345',
+            'Harvest-Account-Id': '123456',
           },
-          data: data
+          data,
         });
-        
+
         // For error responses, axios would throw
         if (mockResponse.status >= 400) {
           const error = new Error(`HTTP ${mockResponse.status}`);
           (error as any).response = {
             status: mockResponse.status,
             data: mockResponse.data,
-            headers: mockResponse.headers || {}
+            headers: mockResponse.headers || {},
           };
           (error as any).config = { url };
           throw error;
         }
-        
+
         return {
           status: mockResponse.status,
           data: mockResponse.data,
           headers: mockResponse.headers || {},
-          config: { url }
+          config: { url },
         };
       }),
       delete: jest.fn().mockImplementation(async (url: string) => {
@@ -129,34 +129,34 @@ describe('Time Entry Tools', () => {
           method: 'DELETE',
           url: `https://api.harvestapp.com/v2${url}`,
           headers: {
-            'Authorization': 'Bearer test_token_12345',
-            'Harvest-Account-Id': '123456'
-          }
+            Authorization: 'Bearer test_token_12345',
+            'Harvest-Account-Id': '123456',
+          },
         });
-        
+
         // For error responses, axios would throw
         if (mockResponse.status >= 400) {
           const error = new Error(`HTTP ${mockResponse.status}`);
           (error as any).response = {
             status: mockResponse.status,
             data: mockResponse.data,
-            headers: mockResponse.headers || {}
+            headers: mockResponse.headers || {},
           };
           (error as any).config = { url };
           throw error;
         }
-        
+
         return {
           status: mockResponse.status,
           data: mockResponse.data,
           headers: mockResponse.headers || {},
-          config: { url }
+          config: { url },
         };
       }),
       interceptors: {
         request: { use: jest.fn() },
-        response: { use: jest.fn() }
-      }
+        response: { use: jest.fn() },
+      },
     };
 
     // Create server with mock client
@@ -164,14 +164,14 @@ describe('Time Entry Tools', () => {
       harvest: {
         accessToken: 'test_token_12345',
         accountId: '123456',
-      }
+      },
     });
 
     // Replace the HTTP client with our mock
     harvestServer.harvestClient = new HarvestAPIClient({
       accessToken: 'test_token_12345',
       accountId: '123456',
-      httpClient: mockClient
+      httpClient: mockClient,
     });
   });
 
@@ -187,20 +187,22 @@ describe('Time Entry Tools', () => {
       // First check if tools are registered at all
       const allTools = await harvestServer.listTools();
       expect(allTools.length).toBe(56); // Complete Harvest MCP server with all registered tools
-      
+
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
       expect(timeEntryTools.length).toBe(8); // Should be 8 time entry tools
-      
-      const listTimeEntriesInTool = timeEntryTools.find((tool: any) => tool.name === 'list_time_entries');
+
+      const listTimeEntriesInTool = timeEntryTools.find(
+        (tool: any) => tool.name === 'list_time_entries'
+      );
       expect(listTimeEntriesInTool).toBeDefined();
 
       const result = await listTimeEntriesInTool.execute({});
-      
+
       expect(result).toBeDefined();
       expect(result.time_entries).toBeDefined();
       expect(Array.isArray(result.time_entries)).toBe(true);
       expect(result.time_entries).toHaveLength(1);
-      
+
       const timeEntry = result.time_entries[0];
       expect(timeEntry.id).toHaveValidHarvestId();
       expect(timeEntry.spent_date).toBeValidDateString();
@@ -211,15 +213,17 @@ describe('Time Entry Tools', () => {
 
     it('should handle query parameters correctly', async () => {
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
-      const listTimeEntriesInTool = timeEntryTools.find((tool: any) => tool.name === 'list_time_entries');
+      const listTimeEntriesInTool = timeEntryTools.find(
+        (tool: any) => tool.name === 'list_time_entries'
+      );
 
       const result = await listTimeEntriesInTool.execute({
         user_id: 1782959,
         from: '2025-09-01',
         to: '2025-09-30',
-        is_running: false
+        is_running: false,
       });
-      
+
       expect(result).toBeDefined();
       expect(result.time_entries).toBeDefined();
       expect(result.per_page).toBe(2000);
@@ -228,7 +232,9 @@ describe('Time Entry Tools', () => {
 
     it('should validate query parameters with Zod', async () => {
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
-      const listTimeEntriesInTool = timeEntryTools.find((tool: any) => tool.name === 'list_time_entries');
+      const listTimeEntriesInTool = timeEntryTools.find(
+        (tool: any) => tool.name === 'list_time_entries'
+      );
 
       const result1 = await listTimeEntriesInTool.execute({
         user_id: 'invalid', // Should be number
@@ -244,7 +250,7 @@ describe('Time Entry Tools', () => {
     it('should be properly registered in MCP server', async () => {
       const tools = await harvestServer.listTools();
       const listTimeEntriesInTool = tools.find((tool: any) => tool.name === 'list_time_entries');
-      
+
       expect(listTimeEntriesInTool).toBeDefined();
       expect(listTimeEntriesInTool.description).toContain('list of time entries');
       expect(listTimeEntriesInTool.inputSchema.properties).toHaveProperty('user_id');
@@ -262,7 +268,7 @@ describe('Time Entry Tools', () => {
       expect(getTimeEntryTool).toBeDefined();
 
       const result = await getTimeEntryTool.execute({ time_entry_id: 636709355 });
-      
+
       expect(result).toBeDefined();
       expect(result.id).toHaveValidHarvestId();
       expect(result.spent_date).toBeValidDateString();
@@ -278,7 +284,7 @@ describe('Time Entry Tools', () => {
       mockServer.responses.set('GET:/v2/time_entries/999999999', {
         status: 404,
         data: { error: 'not_found', error_description: 'Time entry not found' },
-        headers: {}
+        headers: {},
       });
 
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
@@ -303,7 +309,9 @@ describe('Time Entry Tools', () => {
   describe('create_time_entry tool', () => {
     it('should successfully create a time entry with hours', async () => {
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
-      const createTimeEntryTool = timeEntryTools.find((tool: any) => tool.name === 'create_time_entry');
+      const createTimeEntryTool = timeEntryTools.find(
+        (tool: any) => tool.name === 'create_time_entry'
+      );
 
       expect(createTimeEntryTool).toBeDefined();
 
@@ -312,9 +320,9 @@ describe('Time Entry Tools', () => {
         task_id: 8083365,
         spent_date: '2025-09-10',
         hours: 2.5,
-        notes: 'Code review and testing'
+        notes: 'Code review and testing',
       });
-      
+
       expect(result).toBeDefined();
       expect(result.id).toHaveValidHarvestId();
       expect(result.hours).toBeValidDecimalHours();
@@ -324,7 +332,9 @@ describe('Time Entry Tools', () => {
 
     it('should successfully create a time entry with start/end times', async () => {
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
-      const createTimeEntryTool = timeEntryTools.find((tool: any) => tool.name === 'create_time_entry');
+      const createTimeEntryTool = timeEntryTools.find(
+        (tool: any) => tool.name === 'create_time_entry'
+      );
 
       const result = await createTimeEntryTool.execute({
         project_id: 14307913,
@@ -332,9 +342,9 @@ describe('Time Entry Tools', () => {
         spent_date: '2025-09-10',
         started_time: '09:00',
         ended_time: '11:30',
-        notes: 'Morning development work'
+        notes: 'Morning development work',
       });
-      
+
       expect(result).toBeDefined();
       expect(result.started_time).toBeValidTimeString();
       expect(result.ended_time).toBeValidTimeString();
@@ -342,14 +352,16 @@ describe('Time Entry Tools', () => {
 
     it('should validate required parameters', async () => {
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
-      const createTimeEntryTool = timeEntryTools.find((tool: any) => tool.name === 'create_time_entry');
+      const createTimeEntryTool = timeEntryTools.find(
+        (tool: any) => tool.name === 'create_time_entry'
+      );
 
       const result = await createTimeEntryTool.execute({});
       expectToolError(result, 'Invalid parameters');
 
       const result2 = await createTimeEntryTool.execute({
         project_id: 14307913,
-        task_id: 8083365
+        task_id: 8083365,
         // Missing spent_date
       });
       expectToolError(result2, 'Invalid parameters');
@@ -357,12 +369,14 @@ describe('Time Entry Tools', () => {
 
     it('should validate hours or time range requirement', async () => {
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
-      const createTimeEntryTool = timeEntryTools.find((tool: any) => tool.name === 'create_time_entry');
+      const createTimeEntryTool = timeEntryTools.find(
+        (tool: any) => tool.name === 'create_time_entry'
+      );
 
       const result = await createTimeEntryTool.execute({
         project_id: 14307913,
         task_id: 8083365,
-        spent_date: '2025-09-10'
+        spent_date: '2025-09-10',
         // Missing hours AND time range
       });
       expectToolError(result, 'Invalid parameters');
@@ -372,16 +386,18 @@ describe('Time Entry Tools', () => {
   describe('update_time_entry tool', () => {
     it('should successfully update a time entry', async () => {
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
-      const updateTimeEntryTool = timeEntryTools.find((tool: any) => tool.name === 'update_time_entry');
+      const updateTimeEntryTool = timeEntryTools.find(
+        (tool: any) => tool.name === 'update_time_entry'
+      );
 
       expect(updateTimeEntryTool).toBeDefined();
 
       const result = await updateTimeEntryTool.execute({
         id: 636709355,
         hours: 7.5,
-        notes: 'Updated: Development work on authentication system'
+        notes: 'Updated: Development work on authentication system',
       });
-      
+
       expect(result).toBeDefined();
       expect(result.id).toBe(636709355);
       expect(result.hours).toBe(7.5);
@@ -390,10 +406,12 @@ describe('Time Entry Tools', () => {
 
     it('should validate required id parameter', async () => {
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
-      const updateTimeEntryTool = timeEntryTools.find((tool: any) => tool.name === 'update_time_entry');
+      const updateTimeEntryTool = timeEntryTools.find(
+        (tool: any) => tool.name === 'update_time_entry'
+      );
 
       const result = await updateTimeEntryTool.execute({
-        hours: 5.0
+        hours: 5.0,
         // Missing id
       });
       expectToolError(result, 'Invalid parameters');
@@ -403,19 +421,23 @@ describe('Time Entry Tools', () => {
   describe('delete_time_entry tool', () => {
     it('should successfully delete a time entry', async () => {
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
-      const deleteTimeEntryTool = timeEntryTools.find((tool: any) => tool.name === 'delete_time_entry');
+      const deleteTimeEntryTool = timeEntryTools.find(
+        (tool: any) => tool.name === 'delete_time_entry'
+      );
 
       expect(deleteTimeEntryTool).toBeDefined();
 
       const result = await deleteTimeEntryTool.execute({ time_entry_id: 636709355 });
-      
+
       expect(result).toBeDefined();
       expect(result.message).toContain('deleted successfully');
     });
 
     it('should handle not found errors for delete', async () => {
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
-      const deleteTimeEntryTool = timeEntryTools.find((tool: any) => tool.name === 'delete_time_entry');
+      const deleteTimeEntryTool = timeEntryTools.find(
+        (tool: any) => tool.name === 'delete_time_entry'
+      );
 
       const result = await deleteTimeEntryTool.execute({ time_entry_id: 999999999 });
       expectToolError(result, 'HTTP 404');
@@ -433,9 +455,9 @@ describe('Time Entry Tools', () => {
         project_id: 14307913,
         task_id: 8083365,
         spent_date: '2025-09-10',
-        notes: 'Timer started for new task'
+        notes: 'Timer started for new task',
       });
-      
+
       expect(result).toBeDefined();
       expect(result.is_running).toBe(true);
       expect(result.hours).toBe(0); // Just started
@@ -449,7 +471,7 @@ describe('Time Entry Tools', () => {
       expect(stopTimerTool).toBeDefined();
 
       const result = await stopTimerTool.execute({ id: 636709357 });
-      
+
       expect(result).toBeDefined();
       expect(result.is_running).toBe(false);
       expect(result.hours).toBeGreaterThan(0); // Should have calculated hours
@@ -463,7 +485,7 @@ describe('Time Entry Tools', () => {
       expect(restartTimerTool).toBeDefined();
 
       const result = await restartTimerTool.execute({ id: 636709355 });
-      
+
       expect(result).toBeDefined();
       expect(result.is_running).toBe(true);
       expect(result.hours).toBe(0); // Fresh restart
@@ -480,16 +502,16 @@ describe('Time Entry Tools', () => {
       // Start timer validation
       const result1 = await startTimerTool.execute({});
       expectToolError(result1, 'Invalid parameters');
-      
+
       // Test missing spent_date specifically
       const result1b = await startTimerTool.execute({
         project_id: 14307913,
-        task_id: 8083365
+        task_id: 8083365,
         // Missing spent_date
       });
       expectToolError(result1b, 'Invalid parameters');
 
-      // Stop timer validation  
+      // Stop timer validation
       const result2 = await stopTimerTool.execute({});
       expectToolError(result2, 'Invalid parameters');
 
@@ -502,9 +524,9 @@ describe('Time Entry Tools', () => {
   describe('MCP Integration', () => {
     it('should return all time entry tools by category', async () => {
       const timeEntryTools = harvestServer.getToolsByCategory('time_entries');
-      
+
       expect(timeEntryTools).toHaveLength(8);
-      
+
       const toolNames = timeEntryTools.map((tool: any) => tool.name);
       expect(toolNames).toContain('list_time_entries');
       expect(toolNames).toContain('get_time_entry');
@@ -518,12 +540,15 @@ describe('Time Entry Tools', () => {
 
     it('should have proper tool descriptions and schemas', async () => {
       const tools = await harvestServer.listTools();
-      const timeEntryTools = tools.filter((tool: any) => 
-        tool.name.includes('time_entry') || tool.name.includes('time_entries') || tool.name.includes('timer')
+      const timeEntryTools = tools.filter(
+        (tool: any) =>
+          tool.name.includes('time_entry') ||
+          tool.name.includes('time_entries') ||
+          tool.name.includes('timer')
       );
-      
+
       expect(timeEntryTools).toHaveLength(8);
-      
+
       timeEntryTools.forEach((tool: any) => {
         expect(tool.description).toBeTruthy();
         expect(tool.inputSchema).toBeDefined();

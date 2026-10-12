@@ -12,40 +12,38 @@ import { EstimatesClient } from './estimates-client';
 import { ReportsClient } from './reports-client';
 
 // Type imports for backward compatibility
-import { 
+import {
   type CreateTimeEntryInput,
   type UpdateTimeEntryInput,
   type TimeEntryQuery,
   type StartTimerInput,
   type StopTimerInput,
-  type RestartTimerInput
+  type RestartTimerInput,
 } from '../schemas/time-entry';
 
 import {
   type CreateClientInput,
   type UpdateClientInput,
-  type ClientQuery
+  type ClientQuery,
 } from '../schemas/client';
 
-import {
-  type CreateUserInput,
-  type UpdateUserInput,
-  type UserQuery
-} from '../schemas/user';
+import { type CreateUserInput, type UpdateUserInput, type UserQuery } from '../schemas/user';
 
 import {
   type CreateInvoiceInput,
   type UpdateInvoiceInput,
   type InvoiceQuery,
+  type InvoicePayment,
+  type InvoicePaymentsList,
   type InvoicePaymentQuery,
-  type RecordInvoicePaymentInput
+  type RecordInvoicePaymentInput,
 } from '../schemas/invoice';
 
 import {
   type CreateExpenseInput,
   type UpdateExpenseInput,
   type ExpenseQuery,
-  type ExpenseCategoryQuery
+  type ExpenseCategoryQuery,
 } from '../schemas/expense';
 
 import {
@@ -58,7 +56,7 @@ import {
   type TimeReportQuery,
   type ExpenseReportQuery,
   type ProjectBudgetReportQuery,
-  type UninvoicedReportQuery
+  type UninvoicedReportQuery,
 } from '../schemas/report';
 
 // Re-export HarvestAPIOptions from base client for backward compatibility
@@ -246,11 +244,19 @@ export class HarvestAPIClient {
     return this.invoicesClient.getInvoice(invoiceId);
   }
 
-  async getInvoicePayments(invoiceId: number, query?: Omit<InvoicePaymentQuery, 'invoice_id'>): Promise<any> {
+  /** List validated invoice payments, including Harvest pagination links. */
+  async getInvoicePayments(
+    invoiceId: number,
+    query?: Omit<InvoicePaymentQuery, 'invoice_id'>
+  ): Promise<InvoicePaymentsList> {
     return this.invoicesClient.getInvoicePayments(invoiceId, query);
   }
 
-  async createInvoicePayment(invoiceId: number, input: Omit<RecordInvoicePaymentInput, 'invoice_id'>): Promise<any> {
+  /** Record a single payment; callers must reconcile ambiguous failures instead of retrying. */
+  async createInvoicePayment(
+    invoiceId: number,
+    input: Omit<RecordInvoicePaymentInput, 'invoice_id'>
+  ): Promise<InvoicePayment> {
     return this.invoicesClient.createInvoicePayment(invoiceId, input);
   }
 

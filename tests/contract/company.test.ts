@@ -39,23 +39,23 @@ describe('Company Tool', () => {
           method: 'GET',
           url: `https://api.harvestapp.com/v2${url}`,
           headers: {
-            'Authorization': 'Bearer valid-token',
-            'Harvest-Account-Id': 'valid-account-id'
-          }
+            Authorization: 'Bearer valid-token',
+            'Harvest-Account-Id': 'valid-account-id',
+          },
         });
-        
+
         // Simulate axios response structure
         return {
           status: mockResponse.status,
           data: mockResponse.data,
           headers: mockResponse.headers || {},
-          config: { url }
+          config: { url },
         };
       }),
       interceptors: {
         request: { use: jest.fn() },
-        response: { use: jest.fn() }
-      }
+        response: { use: jest.fn() },
+      },
     };
 
     // Create server with mock client
@@ -63,14 +63,14 @@ describe('Company Tool', () => {
       harvest: {
         accessToken: 'valid-token',
         accountId: 'valid-account-id',
-      }
+      },
     });
 
     // Replace the HTTP client with our mock
     harvestServer.harvestClient = new HarvestAPIClient({
       accessToken: 'valid-token',
       accountId: 'valid-account-id',
-      httpClient: mockClient
+      httpClient: mockClient,
     });
   });
 
@@ -89,7 +89,7 @@ describe('Company Tool', () => {
       expect(getCompanyTool).toBeDefined();
 
       const result = await getCompanyTool.execute({});
-      
+
       expect(result).toBeDefined();
       expect(result.id).toHaveValidHarvestId();
       expect(result.name).toBe('Mock Harvest Company');
@@ -103,7 +103,7 @@ describe('Company Tool', () => {
       const getCompanyTool = companyTools.find((tool: any) => tool.name === 'get_company');
 
       const result = await getCompanyTool.execute({});
-      
+
       // Test that we get basic expected fields without validating schema
       expect(result.id).toHaveValidHarvestId();
       expect(result.name).toBeTruthy();
@@ -124,45 +124,45 @@ describe('Company Tool', () => {
             method: 'GET',
             url: 'https://api.harvestapp.com/v2/company',
             headers: {
-              'Authorization': 'Bearer invalid-token',
-              'Harvest-Account-Id': 'invalid-account'
-            }
+              Authorization: 'Bearer invalid-token',
+              'Harvest-Account-Id': 'invalid-account',
+            },
           });
-          
+
           // For error responses, axios would throw
           if (mockResponse.status >= 400) {
             const error = new Error(`HTTP ${mockResponse.status}`);
             (error as any).response = {
               status: mockResponse.status,
               data: mockResponse.data,
-              headers: mockResponse.headers || {}
+              headers: mockResponse.headers || {},
             };
             throw error;
           }
-          
+
           return {
             status: mockResponse.status,
             data: mockResponse.data,
-            headers: mockResponse.headers || {}
+            headers: mockResponse.headers || {},
           };
         }),
         interceptors: {
           request: { use: jest.fn() },
-          response: { use: jest.fn() }
-        }
+          response: { use: jest.fn() },
+        },
       };
 
       const invalidServer = new HarvestMCPServer({
         harvest: {
           accessToken: 'invalid-token',
           accountId: 'invalid-account',
-        }
+        },
       });
 
       invalidServer.harvestClient = new HarvestAPIClient({
         accessToken: 'invalid-token',
         accountId: 'invalid-account',
-        httpClient: mockClient
+        httpClient: mockClient,
       });
 
       const companyTools = invalidServer.getToolsByCategory('company');
@@ -187,30 +187,30 @@ describe('Company Tool', () => {
           (error as any).response = {
             status: 429,
             data: {
-              error: "rate_limit_exceeded",
-              error_description: "Too many requests"
+              error: 'rate_limit_exceeded',
+              error_description: 'Too many requests',
             },
-            headers: { 'Retry-After': '60' }
+            headers: { 'Retry-After': '60' },
           };
           throw error;
         }),
         interceptors: {
           request: { use: jest.fn() },
-          response: { use: jest.fn() }
-        }
+          response: { use: jest.fn() },
+        },
       };
 
       const rateLimitServer = new HarvestMCPServer({
         harvest: {
           accessToken: 'valid-token',
           accountId: 'valid-account-id',
-        }
+        },
       });
 
       rateLimitServer.harvestClient = new HarvestAPIClient({
         accessToken: 'valid-token',
         accountId: 'valid-account-id',
-        httpClient: rateLimitMockClient
+        httpClient: rateLimitMockClient,
       });
 
       const companyTools = rateLimitServer.getToolsByCategory('company');
@@ -234,7 +234,7 @@ describe('Company Tool', () => {
       expect(companyTool.inputSchema).toEqual({
         type: 'object',
         properties: {},
-        additionalProperties: false
+        additionalProperties: false,
       });
     });
 
@@ -275,7 +275,7 @@ describe('Company Tool', () => {
     it('should return tools by category', () => {
       const companyTools = harvestServer.getToolsByCategory('company');
       expect(companyTools).toHaveLength(1);
-      
+
       const otherTools = harvestServer.getToolsByCategory('nonexistent');
       expect(otherTools).toHaveLength(0);
     });

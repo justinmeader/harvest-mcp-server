@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { appConfig, HARVEST_API_BASE_URL } from '../config/index';
 import { createLogger } from '../utils/logger';
 
@@ -29,7 +29,7 @@ export abstract class BaseHarvestClient {
         baseURL: options.baseUrl || HARVEST_API_BASE_URL,
         timeout: options.timeout || appConfig.http.timeout,
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          Authorization: `Bearer ${this.accessToken}`,
           'Harvest-Account-Id': this.accountId,
           'User-Agent': appConfig.harvest.userAgent,
           'Content-Type': 'application/json',
@@ -64,11 +64,14 @@ export abstract class BaseHarvestClient {
           // Server responded with error status
           const status = error.response.status;
           const statusText = error.response.statusText;
-          
+
           this.logger.error(`HTTP ${status} ${statusText} from ${error.config?.url}:`, {
             status,
             statusText,
-            data: error.response.data
+            // Payment errors can contain financial notes; do not persist their response bodies.
+            data: /\/invoices\/\d+\/payments(?:[?]|$)/.test(error.config?.url || '')
+              ? '[redacted payment response]'
+              : error.response.data,
           });
 
           switch (status) {
@@ -80,7 +83,9 @@ export abstract class BaseHarvestClient {
               throw new Error('Resource not found');
             case 429:
               const retryAfter = error.response.headers['retry-after'];
-              throw new Error(`Rate limit exceeded. Retry after ${retryAfter || 'unknown'} seconds`);
+              throw new Error(
+                `Rate limit exceeded. Retry after ${retryAfter || 'unknown'} seconds`
+              );
             case 500:
             case 502:
             case 503:
@@ -104,14 +109,14 @@ export abstract class BaseHarvestClient {
 
   protected buildQueryString(query?: Record<string, any>): string {
     if (!query) return '';
-    
+
     const params = new URLSearchParams();
     Object.entries(query).forEach(([key, value]) => {
       if (value !== undefined) {
         params.append(key, String(value));
       }
     });
-    
+
     return params.toString();
   }
 
