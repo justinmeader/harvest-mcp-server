@@ -36,7 +36,9 @@ import {
 import {
   type CreateInvoiceInput,
   type UpdateInvoiceInput,
-  type InvoiceQuery
+  type InvoiceQuery,
+  type InvoicePaymentQuery,
+  type RecordInvoicePaymentInput
 } from '../schemas/invoice';
 
 import {
@@ -242,6 +244,14 @@ export class HarvestAPIClient {
 
   async getInvoice(invoiceId: number): Promise<any> {
     return this.invoicesClient.getInvoice(invoiceId);
+  }
+
+  async getInvoicePayments(invoiceId: number, query?: Omit<InvoicePaymentQuery, 'invoice_id'>): Promise<any> {
+    return this.invoicesClient.getInvoicePayments(invoiceId, query);
+  }
+
+  async createInvoicePayment(invoiceId: number, input: Omit<RecordInvoicePaymentInput, 'invoice_id'>): Promise<any> {
+    return this.invoicesClient.createInvoicePayment(invoiceId, input);
   }
 
   async createInvoice(input: CreateInvoiceInput): Promise<any> {

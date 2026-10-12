@@ -7,7 +7,9 @@ import {
   InvoiceQuerySchema,
   type CreateInvoiceInput,
   type UpdateInvoiceInput,
-  type InvoiceQuery
+  type InvoiceQuery,
+  type InvoicePaymentQuery,
+  type RecordInvoicePaymentInput
 } from '../schemas/invoice';
 
 export class InvoicesClient extends BaseHarvestClient {
@@ -56,6 +58,30 @@ export class InvoicesClient extends BaseHarvestClient {
       this.logger.error('Failed to retrieve invoice', { invoiceId, error: (error as Error).message });
       throw error;
     }
+  }
+
+  async getInvoicePayments(invoiceId: number, query: Omit<InvoicePaymentQuery, 'invoice_id'> = {}): Promise<any> {
+    let url: string;
+    if (query.page_url) {
+      const next = new URL(query.page_url);
+      const expectedPath = `/v2/invoices/${invoiceId}/payments`;
+      if (next.origin !== 'https://api.harvestapp.com' || next.pathname !== expectedPath || next.hash ||
+          query.per_page !== undefined || query.updated_since !== undefined) {
+        throw new Error('Invalid payment pagination URL');
+      }
+      url = `${next.pathname.slice(3)}${next.search}`;
+    } else {
+      const queryString = this.buildQueryString({ updated_since: query.updated_since, per_page: query.per_page });
+      url = `/invoices/${invoiceId}/payments${queryString ? `?${queryString}` : ''}`;
+    }
+    const response: AxiosResponse = await this.client.get(url);
+    return response.data;
+  }
+
+  async createInvoicePayment(invoiceId: number, input: Omit<RecordInvoicePaymentInput, 'invoice_id'>): Promise<any> {
+    // A payment POST is not idempotent. The caller must reconcile any ambiguous failure.
+    const response: AxiosResponse = await this.client.post(`/invoices/${invoiceId}/payments`, input);
+    return response.data;
   }
 
   async createInvoice(input: CreateInvoiceInput): Promise<any> {

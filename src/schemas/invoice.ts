@@ -129,3 +129,29 @@ export type UpdateInvoiceInput = z.infer<typeof UpdateInvoiceSchema>;
 export type InvoiceLineItem = z.infer<typeof InvoiceLineItemSchema>;
 export type CreateInvoiceLineItemInput = z.infer<typeof CreateInvoiceLineItemSchema>;
 export type InvoiceQuery = z.infer<typeof InvoiceQuerySchema>;
+
+const PaymentDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}, 'Invalid calendar date');
+
+export const InvoicePaymentQuerySchema = z.object({
+  invoice_id: z.number().int().positive(),
+  updated_since: z.string().datetime({ offset: true }).optional(),
+  per_page: z.number().int().min(1).max(2000).optional(),
+  page_url: z.string().url().optional(),
+}).strict();
+
+export const RecordInvoicePaymentSchema = z.object({
+  invoice_id: z.number().int().positive(),
+  amount: z.number().finite().positive(),
+  paid_at: z.string().datetime({ offset: true }).optional(),
+  paid_date: PaymentDateSchema.optional(),
+  notes: z.string().optional(),
+  send_thank_you: z.boolean().default(false),
+}).strict().refine(value => Boolean(value.paid_at) !== Boolean(value.paid_date), {
+  message: 'Supply exactly one of paid_at or paid_date',
+});
+
+export type InvoicePaymentQuery = z.infer<typeof InvoicePaymentQuerySchema>;
+export type RecordInvoicePaymentInput = z.infer<typeof RecordInvoicePaymentSchema>;
