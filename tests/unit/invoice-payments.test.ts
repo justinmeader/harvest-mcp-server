@@ -89,16 +89,16 @@ describe('invoice payments HTTP boundary', () => {
     const post = jest.fn().mockResolvedValue({ data: payment });
     const client: any = new InvoicesClient({ accessToken: 'fixture', accountId: '1', httpClient: { get, post } });
     expect(await client.getInvoicePayments(7, { per_page: 1 })).toMatchObject({ invoice_payments: [payment] });
-    expect(get).toHaveBeenCalledWith('/invoices/7/payments?per_page=1');
+    expect(get).toHaveBeenCalledWith('/invoices/7/payments?per_page=1', { maxRedirects: 0 });
     expect(await client.createInvoicePayment(7, { amount: 25, paid_date: '2026-10-10', send_thank_you: false })).toEqual(payment);
-    expect(post).toHaveBeenCalledWith('/invoices/7/payments', { amount: 25, paid_date: '2026-10-10', send_thank_you: false });
+    expect(post).toHaveBeenCalledWith('/invoices/7/payments', { amount: 25, paid_date: '2026-10-10', send_thank_you: false }, { maxRedirects: 0 });
   });
 
   it('follows a validated cursor URL without constructing a page number', async () => {
     const get = jest.fn().mockResolvedValue({ data: { invoice_payments: [] } });
     const client: any = new InvoicesClient({ accessToken: 'fixture', accountId: '1', httpClient: { get } });
     await client.getInvoicePayments(7, { page_url: 'https://api.harvestapp.com/v2/invoices/7/payments?cursor=abc&per_page=1&ref=next_cursor' });
-    expect(get).toHaveBeenCalledWith('/invoices/7/payments?cursor=abc&per_page=1&ref=next_cursor');
+    expect(get).toHaveBeenCalledWith('/invoices/7/payments?cursor=abc&per_page=1&ref=next_cursor', { maxRedirects: 0 });
     await expect(client.getInvoicePayments(7, { page_url: 'https://evil.example/v2/invoices/7/payments?cursor=abc' })).rejects.toThrow();
     await expect(client.getInvoicePayments(7, { page_url: 'https://api.harvestapp.com/v2/invoices/8/payments?cursor=abc' })).rejects.toThrow();
     expect(get).toHaveBeenCalledTimes(1);
@@ -133,6 +133,41 @@ describe('invoice payments HTTP boundary', () => {
         timeout: 1000,
       });
       await expect(client.createInvoicePayment(7, { amount: 25, paid_date: '2026-10-10', send_thank_you: false })).rejects.toThrow();
+      expect(attempts).toBe(1);
+    } finally {
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    }
+  });
+
+  it.each([
+    ['GET', 302],
+    ['POST', 307],
+    ['POST', 308],
+  ] as const)('does not follow a %s payment redirect with status %s', async (method, status) => {
+    let attempts = 0;
+    const server = createServer((request, response) => {
+      attempts++;
+      if (attempts === 1) {
+        expect(request.method).toBe(method);
+        expect(request.url).toBe('/invoices/7/payments');
+        response.writeHead(status, { Location: '/other', 'Content-Type': 'application/json' });
+        response.end('{}');
+      } else {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end('{}');
+      }
+    });
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    try {
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('No local port');
+      const client = new InvoicesClient({
+        accessToken: 'fixture', accountId: '1', baseUrl: `http://127.0.0.1:${address.port}`,
+      });
+      const operation = method === 'GET'
+        ? client.getInvoicePayments(7)
+        : client.createInvoicePayment(7, { amount: 25, paid_date: '2026-10-10', send_thank_you: false });
+      await expect(operation).rejects.toThrow();
       expect(attempts).toBe(1);
     } finally {
       await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));

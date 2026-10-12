@@ -74,13 +74,13 @@ export class InvoicesClient extends BaseHarvestClient {
       const queryString = this.buildQueryString({ updated_since: query.updated_since, per_page: query.per_page });
       url = `/invoices/${invoiceId}/payments${queryString ? `?${queryString}` : ''}`;
     }
-    const response: AxiosResponse = await this.client.get(url);
+    const response: AxiosResponse = await this.client.get(url, { maxRedirects: 0 });
     return response.data;
   }
 
   async createInvoicePayment(invoiceId: number, input: Omit<RecordInvoicePaymentInput, 'invoice_id'>): Promise<any> {
     // A payment POST is not idempotent. The caller must reconcile any ambiguous failure.
-    const response: AxiosResponse = await this.client.post(`/invoices/${invoiceId}/payments`, input);
+    const response: AxiosResponse = await this.client.post(`/invoices/${invoiceId}/payments`, input, { maxRedirects: 0 });
     return response.data;
   }
 
