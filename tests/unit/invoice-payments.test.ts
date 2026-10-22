@@ -1,3 +1,7 @@
+// Configuration validates on import, before tests/setup.ts runs its beforeAll hook.
+process.env.HARVEST_ACCESS_TOKEN = 'test_token_12345';
+process.env.HARVEST_ACCOUNT_ID = '123456';
+
 import { registerInvoiceTools } from '../../src/tools/invoices';
 import { InvoicesClient } from '../../src/client/invoices-client';
 import { createServer } from 'node:http';
@@ -199,6 +203,61 @@ describe('invoice payments HTTP boundary', () => {
     expect(get).toHaveBeenCalledTimes(1);
   });
 
+  it.each(['', '/v2', '/proxy/harvest/v2/'])(
+    'follows cursor links under the configured base URL path %s',
+    async (basePath) => {
+      const requests: string[] = [];
+      let baseUrl: string;
+      const server = createServer((request, response) => {
+        requests.push(request.url || '');
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(
+          JSON.stringify({
+            invoice_payments: [],
+            links: { next: `${baseUrl.replace(/\/$/, '')}/invoices/7/payments?cursor=abc` },
+          })
+        );
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      try {
+        const address = server.address();
+        if (!address || typeof address === 'string') throw new Error('No local port');
+        baseUrl = `http://127.0.0.1:${address.port}${basePath}`;
+        const client = new InvoicesClient({ accessToken: 'fixture', accountId: '1', baseUrl });
+        const firstPage = await client.getInvoicePayments(7);
+        const nextUrl = firstPage.links!.next!;
+        await client.getInvoicePayments(7, { page_url: nextUrl });
+        const endpoint = `${basePath.replace(/\/$/, '')}/invoices/7/payments`;
+        expect(requests).toEqual([endpoint, `${endpoint}?cursor=abc`]);
+        const invalidUrls = [
+          'https://api.harvestapp.com/v2/invoices/7/payments?cursor=abc',
+          nextUrl.replace('/invoices/7/', '/invoices/8/'),
+          nextUrl.replace('127.0.0.1', 'user:password@127.0.0.1'),
+          nextUrl + '#fragment',
+        ];
+        for (const page_url of invalidUrls) {
+          await expect(client.getInvoicePayments(7, { page_url })).rejects.toThrow(
+            'Invalid payment pagination URL'
+          );
+        }
+        await expect(
+          client.getInvoicePayments(7, { page_url: nextUrl, per_page: 1 })
+        ).rejects.toThrow('Invalid payment pagination URL');
+        await expect(
+          client.getInvoicePayments(7, {
+            page_url: nextUrl,
+            updated_since: '2026-10-10T00:00:00Z',
+          })
+        ).rejects.toThrow('Invalid payment pagination URL');
+        expect(requests).toHaveLength(2);
+      } finally {
+        await new Promise<void>((resolve, reject) =>
+          server.close((error) => (error ? reject(error) : resolve()))
+        );
+      }
+    }
+  );
+
   it.each([{ invoice_payments: 'invalid' }, { invoice_payments: [{ ...payment, amount: '25' }] }])(
     'rejects malformed payment lists without disclosing their contents',
     async (data) => {
@@ -281,8 +340,57 @@ describe('invoice payments HTTP boundary', () => {
     expect(post).toHaveBeenCalledTimes(1);
   });
 
-  it.each([500, 429, 'disconnect'] as const)(
-    'never retries a real Axios payment POST after %s',
+  it.each([
+    [400, /HTTP 400/],
+    [401, /Authentication failed/],
+    [403, /Insufficient permissions/],
+    [404, /Resource not found/],
+    [422, /HTTP 422/],
+    [429, /Rate limit exceeded/],
+  ] as const)(
+    'reports a definite HTTP %s failure without reconciliation',
+    async (status, message) => {
+      let attempts = 0;
+      const server = createServer((request, response) => {
+        attempts++;
+        expect(request.method).toBe('POST');
+        expect(request.url).toBe('/invoices/7/payments');
+        response.writeHead(status, { 'Content-Type': 'application/json', 'Retry-After': '60' });
+        response.end(JSON.stringify({ notes: 'private-payment-error-body' }));
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      try {
+        const address = server.address();
+        if (!address || typeof address === 'string') throw new Error('No local port');
+        const client = new InvoicesClient({
+          accessToken: 'fixture',
+          accountId: '1',
+          baseUrl: `http://127.0.0.1:${address.port}`,
+        });
+        const logError = jest
+          .spyOn((client as any).logger, 'error')
+          .mockImplementation(() => undefined);
+        const result = await tool('record_invoice_payment', client).handler.execute({
+          invoice_id: 7,
+          amount: 25,
+          paid_date: '2026-10-10',
+        });
+        expect(result.isError).toBe(true);
+        expect((result.content[0] as any).text).toMatch(message);
+        expect(JSON.stringify(result)).not.toMatch(/unknown|before retry/i);
+        expect(JSON.stringify(result)).not.toContain('private-payment-error-body');
+        expect(JSON.stringify(logError.mock.calls)).not.toContain('private-payment-error-body');
+        expect(attempts).toBe(1);
+      } finally {
+        await new Promise<void>((resolve, reject) =>
+          server.close((error) => (error ? reject(error) : resolve()))
+        );
+      }
+    }
+  );
+
+  it.each([500, 502, 503, 504, 'disconnect', 'timeout'] as const)(
+    'requires reconciliation without retrying after %s',
     async (failure) => {
       let attempts = 0;
       const server = createServer((request, response) => {
@@ -291,6 +399,8 @@ describe('invoice payments HTTP boundary', () => {
         expect(request.url).toBe('/invoices/7/payments');
         if (failure === 'disconnect') {
           request.socket.destroy();
+        } else if (failure === 'timeout') {
+          // Leave the request unanswered to exercise Axios's actual timeout path.
         } else {
           response.writeHead(failure, { 'Content-Type': 'application/json' });
           response.end(JSON.stringify({ notes: 'private-payment-error-body' }));
@@ -304,18 +414,19 @@ describe('invoice payments HTTP boundary', () => {
           accessToken: 'fixture',
           accountId: '1',
           baseUrl: `http://127.0.0.1:${address.port}`,
-          timeout: 1000,
+          timeout: 100,
         });
         const logError = jest
           .spyOn((client as any).logger, 'error')
           .mockImplementation(() => undefined);
-        await expect(
-          client.createInvoicePayment(7, {
-            amount: 25,
-            paid_date: '2026-10-10',
-            send_thank_you: false,
-          })
-        ).rejects.toThrow();
+        const result = await tool('record_invoice_payment', client).handler.execute({
+          invoice_id: 7,
+          amount: 25,
+          paid_date: '2026-10-10',
+        });
+        expect(result.isError).toBe(true);
+        expect((result.content[0] as any).text).toMatch(/outcome is unknown.*before retry/i);
+        expect(JSON.stringify(result)).not.toContain('private-payment-error-body');
         expect(attempts).toBe(1);
         expect(JSON.stringify(logError.mock.calls)).not.toContain('private-payment-error-body');
       } finally {

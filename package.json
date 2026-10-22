@@ -66,8 +66,5 @@
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
-  },
-  "overrides": {
-    "@hono/node-server": "^1.19.17"
   }
 }

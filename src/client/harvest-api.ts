@@ -12,22 +12,26 @@ import { EstimatesClient } from './estimates-client';
 import { ReportsClient } from './reports-client';
 
 // Type imports for backward compatibility
-import {
+import { 
   type CreateTimeEntryInput,
   type UpdateTimeEntryInput,
   type TimeEntryQuery,
   type StartTimerInput,
   type StopTimerInput,
-  type RestartTimerInput,
+  type RestartTimerInput
 } from '../schemas/time-entry';
 
 import {
   type CreateClientInput,
   type UpdateClientInput,
-  type ClientQuery,
+  type ClientQuery
 } from '../schemas/client';
 
-import { type CreateUserInput, type UpdateUserInput, type UserQuery } from '../schemas/user';
+import {
+  type CreateUserInput,
+  type UpdateUserInput,
+  type UserQuery
+} from '../schemas/user';
 
 import {
   type CreateInvoiceInput,
@@ -36,14 +40,14 @@ import {
   type InvoicePayment,
   type InvoicePaymentsList,
   type InvoicePaymentQuery,
-  type RecordInvoicePaymentInput,
+  type RecordInvoicePaymentInput
 } from '../schemas/invoice';
 
 import {
   type CreateExpenseInput,
   type UpdateExpenseInput,
   type ExpenseQuery,
-  type ExpenseCategoryQuery,
+  type ExpenseCategoryQuery
 } from '../schemas/expense';
 
 import {
@@ -56,7 +60,7 @@ import {
   type TimeReportQuery,
   type ExpenseReportQuery,
   type ProjectBudgetReportQuery,
-  type UninvoicedReportQuery,
+  type UninvoicedReportQuery
 } from '../schemas/report';
 
 // Re-export HarvestAPIOptions from base client for backward compatibility

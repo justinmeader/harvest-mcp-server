@@ -22,13 +22,11 @@ export const InvoiceLineItemSchema = z.object({
   amount: z.number().min(0),
   taxed: z.boolean(),
   taxed2: z.boolean(),
-  project: z
-    .object({
-      id: z.number().int().positive(),
-      name: z.string().min(1),
-      code: z.string().nullable(),
-    })
-    .nullable(),
+  project: z.object({
+    id: z.number().int().positive(),
+    name: z.string().min(1),
+    code: z.string().nullable(),
+  }).nullable(),
 });
 
 // Main invoice schema
@@ -55,10 +53,7 @@ export const InvoiceSchema = z.object({
   payment_options: z.array(z.string()),
   sent_at: z.string().datetime({ offset: true }).nullable(),
   paid_at: z.string().datetime({ offset: true }).nullable(),
-  paid_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable(),
+  paid_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   closed_at: z.string().datetime({ offset: true }).nullable(),
   recurring_invoice_id: z.number().int().positive().nullable(),
   created_at: z.string().datetime({ offset: true }),
@@ -90,14 +85,8 @@ export const CreateInvoiceSchema = z.object({
   subject: z.string().optional(),
   notes: z.string().optional(),
   currency: z.string().length(3).optional().default('USD'),
-  issue_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
-    .optional(),
-  due_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
-    .optional(),
+  issue_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional(),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional(),
   payment_term: z.string().optional(),
   tax: z.number().min(0).max(100).optional(),
   tax2: z.number().min(0).max(100).optional(),
@@ -125,14 +114,8 @@ export const InvoiceQuerySchema = z.object({
   client_id: z.number().int().positive().optional(),
   project_id: z.number().int().positive().optional(),
   state: z.enum(['draft', 'open', 'paid', 'closed']).optional(),
-  from: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  to: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   updated_since: z.string().datetime({ offset: true }).optional(),
   page: z.number().int().positive().optional(),
   per_page: z.number().int().min(1).max(2000).optional().default(2000),
@@ -146,7 +129,6 @@ export type UpdateInvoiceInput = z.infer<typeof UpdateInvoiceSchema>;
 export type InvoiceLineItem = z.infer<typeof InvoiceLineItemSchema>;
 export type CreateInvoiceLineItemInput = z.infer<typeof CreateInvoiceLineItemSchema>;
 export type InvoiceQuery = z.infer<typeof InvoiceQuerySchema>;
-
 const PaymentDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)

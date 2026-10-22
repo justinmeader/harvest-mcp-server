@@ -2,9 +2,12 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import express, { Request, Response, NextFunction } from 'express';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { appConfig } from './config/index';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
+import { appConfig, HarvestConfig } from './config/index';
 import { createLogger } from './utils/logger';
 import { HarvestAPIClient } from './client/harvest-api';
 import { BaseToolConfig } from './types';
@@ -65,7 +68,7 @@ export class HarvestMCPServer {
       get harvestClient() {
         return self.harvestClient;
       },
-      logger,
+      logger: logger,
     };
 
     // Register all modular tools
@@ -83,7 +86,7 @@ export class HarvestMCPServer {
     ];
 
     // Flatten and register all tools
-    toolModules.forEach((toolRegistrations) => {
+    toolModules.forEach(toolRegistrations => {
       toolRegistrations.forEach(({ tool, handler }) => {
         this.tools.set(tool.name, tool);
         this.toolHandlers.set(tool.name, handler);
@@ -102,7 +105,7 @@ export class HarvestMCPServer {
     // Register call_tool handler
     this.server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       const { name, arguments: args } = request.params;
-
+      
       const handler = this.toolHandlers.get(name);
       if (!handler) {
         throw new Error(`Unknown tool: ${name}`);
@@ -123,79 +126,27 @@ export class HarvestMCPServer {
 
   public getToolsByCategory(category: string): any[] {
     const tools: any[] = [];
-
+    
     // Map category names to tool name prefixes/patterns
     const categoryMappings: Record<string, string[]> = {
-      company: ['get_company'],
-      time_entries: [
-        'list_time_entries',
-        'get_time_entry',
-        'create_time_entry',
-        'update_time_entry',
-        'delete_time_entry',
-        'start_timer',
-        'stop_timer',
-        'restart_timer',
-      ],
-      projects: [
-        'list_projects',
-        'get_project',
-        'create_project',
-        'update_project',
-        'delete_project',
-        'list_project_task_assignments',
-        'create_project_task_assignment',
-        'update_project_task_assignment',
-        'delete_project_task_assignment',
-      ],
-      tasks: ['list_tasks', 'get_task', 'create_task', 'update_task', 'delete_task'],
-      clients: ['list_clients', 'get_client', 'create_client', 'update_client', 'delete_client'],
-      users: [
-        'list_users',
-        'get_user',
-        'get_current_user',
-        'create_user',
-        'update_user',
-        'delete_user',
-      ],
-      invoices: [
-        'list_invoices',
-        'get_invoice',
-        'create_invoice',
-        'update_invoice',
-        'delete_invoice',
-        'list_invoice_payments',
-        'record_invoice_payment',
-      ],
-      expenses: [
-        'list_expenses',
-        'get_expense',
-        'create_expense',
-        'update_expense',
-        'delete_expense',
-        'list_expense_categories',
-      ],
-      estimates: [
-        'list_estimates',
-        'get_estimate',
-        'create_estimate',
-        'update_estimate',
-        'delete_estimate',
-      ],
-      reports: [
-        'get_time_report',
-        'get_expense_report',
-        'get_project_budget_report',
-        'get_uninvoiced_report',
-      ],
+      'company': ['get_company'],
+      'time_entries': ['list_time_entries', 'get_time_entry', 'create_time_entry', 'update_time_entry', 'delete_time_entry', 'start_timer', 'stop_timer', 'restart_timer'],
+      'projects': ['list_projects', 'get_project', 'create_project', 'update_project', 'delete_project', 'list_project_task_assignments', 'create_project_task_assignment', 'update_project_task_assignment', 'delete_project_task_assignment'],
+      'tasks': ['list_tasks', 'get_task', 'create_task', 'update_task', 'delete_task'],
+      'clients': ['list_clients', 'get_client', 'create_client', 'update_client', 'delete_client'],
+      'users': ['list_users', 'get_user', 'get_current_user', 'create_user', 'update_user', 'delete_user'],
+      'invoices': ['list_invoices', 'get_invoice', 'create_invoice', 'update_invoice', 'delete_invoice', 'list_invoice_payments', 'record_invoice_payment'],
+      'expenses': ['list_expenses', 'get_expense', 'create_expense', 'update_expense', 'delete_expense', 'list_expense_categories'],
+      'estimates': ['list_estimates', 'get_estimate', 'create_estimate', 'update_estimate', 'delete_estimate'],
+      'reports': ['get_time_report', 'get_expense_report', 'get_project_budget_report', 'get_uninvoiced_report'],
     };
 
     const toolNames = categoryMappings[category] || [];
-
+    
     for (const toolName of toolNames) {
       const tool = this.tools.get(toolName);
       const handler = this.toolHandlers.get(toolName);
-
+      
       if (tool && handler) {
         // Create a combined object with tool metadata and a test-friendly execute method
         tools.push({
@@ -212,11 +163,11 @@ export class HarvestMCPServer {
               }
             }
             return mcpResult;
-          },
+          }
         });
       }
     }
-
+    
     return tools;
   }
 
